@@ -12,6 +12,9 @@ xcodebuild -project 'Table Tool.xcodeproj' -scheme 'Table Tool' \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="${SIGN_IDENTITY:--}" build
 app="$derived/Build/Products/Release/Table Tool Native.app"
 /usr/bin/lipo "$app/Contents/MacOS/Table Tool Native" -verify_arch "$architecture"
+# Seal the final resources even when Xcode reuses an incremental build signature.
+/usr/bin/codesign --force --sign "${SIGN_IDENTITY:--}" \
+  --entitlements 'Table Tool/Table Tool.entitlements' --timestamp=none "$app"
 /usr/bin/codesign --verify --deep --strict "$app"
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Contents/Info.plist")
 mkdir -p dist
