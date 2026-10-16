@@ -15,7 +15,7 @@
 	NSMutableCharacterSet *quoteEndedCharacterSet;
     NSMutableCharacterSet *quoteAndEscapeSet;
     BOOL unquoted;
-	NSRegularExpression *numberRegex;
+
 }
 
 @end
@@ -66,6 +66,7 @@
             }
             return NO;
         }
+        if ([dataString hasPrefix:@"\ufeff"]) dataString = [dataString substringFromIndex:1];
         dataScanner = [NSScanner scannerWithString:dataString];
         dataScanner.caseSensitive = YES;
         dataScanner.charactersToBeSkipped = nil;
@@ -78,7 +79,7 @@
         [quoteAndEscapeSet addCharactersInString:_config.quoteCharacter];
         [quoteAndEscapeSet addCharactersInString:_config.escapeCharacter];
         
-        numberRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"^\\s*[+-]?(\\d+\\%@?\\d*|\\d*\\%@?\\d+)([eE][+-]?\\d+)?\\s*$",_config.decimalMark,_config.decimalMark] options:0 error:NULL];
+
     }
     
     return YES;
@@ -117,11 +118,7 @@
             return nil;
         }
         
-        if(scannedString.length > 0 && [numberRegex numberOfMatchesInString:scannedString options:0 range:NSMakeRange(0, [scannedString length])] == 1){
-            [rowArray addObject:[NSDecimalNumber decimalNumberWithString:scannedString locale:@{NSLocaleDecimalSeparator:_config.decimalMark}]];
-        }else{
-            [rowArray addObject:scannedString];
-        }
+        [rowArray addObject:scannedString];
         
         if(dataScanner.isAtEnd){
             _atEnd = YES;
@@ -155,25 +152,13 @@
     
     for(int i = 0;;i++) {
         NSString *scannedString = nil;
-        BOOL scannedValueIsNumber = NO;
+
         
         [self scanUnquotedValueIntoString:&scannedString error:NULL];
-        if([numberRegex numberOfMatchesInString:scannedString options:0 range:NSMakeRange(0, [scannedString length])] == 1){
-            scannedValueIsNumber = YES;
-        }
-        
         if(tableColumnsOrder.count > i){
-            if(scannedValueIsNumber){
-                [rowArray replaceObjectAtIndex:[tableColumnsOrder[i] integerValue] withObject:[NSDecimalNumber decimalNumberWithString:scannedString locale:@{NSLocaleDecimalSeparator:_config.decimalMark}]];
-            }else{
-                [rowArray replaceObjectAtIndex:[tableColumnsOrder[i] integerValue] withObject:scannedString];
-            }
+            [rowArray replaceObjectAtIndex:[tableColumnsOrder[i] integerValue] withObject:scannedString];
         } else {
-            if(scannedValueIsNumber){
-                [rowArray addObject:[NSDecimalNumber decimalNumberWithString:scannedString locale:@{NSLocaleDecimalSeparator:_config.decimalMark}]];
-            }else{
-                [rowArray addObject:scannedString];
-            }
+            [rowArray addObject:scannedString];
         }
         
         if(dataScanner.isAtEnd){
@@ -282,6 +267,8 @@
 
 -(void)reset{
     dataScanner = nil;
+    _atEnd = NO;
+    if (_data) dataString = nil;
 }
 
 -(void)checkForCRLF{

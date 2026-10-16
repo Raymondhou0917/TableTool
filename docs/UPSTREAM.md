@@ -9,4 +9,4 @@ An Apple Silicon solution already existed before this fork:
 
 This fork adds a reproducible ARM64 build, Traditional Chinese and English localization, a language menu, Big5 in the encoding menu, regression tests, a privacy manifest, and release instructions. It does not claim to be the official App Store update.
 
-The executable retains upstream's CSV parsing and numeric inference behavior. This is a focused compatibility/localization release, not a new CSV engine. Keep backups when converting files; numeric formatting such as leading zeroes may be normalized by the inherited reader. A separately scoped data-preservation change would require additional design and regression coverage.
+Starting with 1.3.1, this fork intentionally replaces numeric coercion with literal cell text in the reader, editor and paste path. Numeric classification remains only for heuristic scoring and display alignment. The writer avoids mutating input rows and rejects unsafe unquoted exports and lossy encodings. Unchanged documents retain their original bytes; edited documents preserve cell values while regenerating CSV quoting. See `VALIDATION.md` for regression coverage and limits.

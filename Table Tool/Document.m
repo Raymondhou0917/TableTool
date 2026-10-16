@@ -18,6 +18,10 @@
     NSCell *dataCell;
     NSData *savedData;
     NSArray *columnNames;
+    NSArray *originalRows;
+    NSArray *originalHeaders;
+    CSVConfiguration *originalConfig;
+    NSInteger originalColumnCount;
     
     NSError *readingError;
     NSView *errorControllerView;
@@ -123,30 +127,45 @@
 -(NSData*)dataWithCSVConfig:(CSVConfiguration*)config error:(NSError**)outError {
 	if(readingError){
 		NSError *error = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:5 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not save", nil), NSLocalizedRecoverySuggestionErrorKey:errorCode5}];
+		if (outError) *outError = error;
 		[self displayError:error];
 		return nil;
 	}
 	
+    // Preserve every byte on an unchanged save, including BOM, quoting and line endings.
+    NSArray *order = [self getColumnsOrder];
+    BOOL originalColumnOrder = order.count == originalColumnCount;
+    BOOL originalHeaderText = YES;
+    for (NSUInteger i = 0; i < order.count; i++) originalColumnOrder &= [order[i] integerValue] == i;
+    for (NSTableColumn *column in self.tableView.tableColumns) {
+        NSUInteger index = column.identifier.integerValue;
+        if (index < originalHeaders.count) originalHeaderText &= [column.headerCell.stringValue isEqual:originalHeaders[index]];
+    }
+    if (savedData && originalColumnOrder && originalHeaderText && [config hasSameFormatAs:originalConfig] && [_data isEqual:originalRows]) {
+        return savedData;
+    }
+
 	NSArray *exportData = _data;
 	
 	if(self.csvConfig.firstRowAsHeader){
 		NSMutableArray *headerRow = [[NSMutableArray alloc]init];
-		for(int i = 0; i < _maxColumnNumber; i++){
-			[headerRow addObject:@""];
+		NSInteger headerWidth = (_maxColumnNumber == originalColumnCount && columnNames) ? columnNames.count : _maxColumnNumber;
+		for(int i = 0; i < headerWidth; i++){
+			[headerRow addObject:i < columnNames.count ? columnNames[i] : @""];
 		}
 		for(NSTableColumn * col in self.tableView.tableColumns){
-			[headerRow replaceObjectAtIndex:col.identifier.integerValue withObject:col.headerCell.stringValue];
+			if (col.identifier.integerValue < headerRow.count) [headerRow replaceObjectAtIndex:col.identifier.integerValue withObject:col.headerCell.stringValue];
 		}
 		exportData = [@[headerRow] arrayByAddingObjectsFromArray:exportData];
 	}
 	
-	NSError *error;
+	NSError *error = nil;
 	
 	CSVWriter *writer = [[CSVWriter alloc] initWithDataArray:exportData columnsOrder:[self getColumnsOrder] configuration:config];
 	NSData *finalData = [writer writeDataWithError:&error];
 	if(finalData == nil){
 		if(error) {
-			*outError = error;
+			if (outError) *outError = error;
 			[self displayError:error];
 		}
 	}
@@ -174,12 +193,27 @@
     self.csvConfig = [formatHeuristic calculatePossibleFormat];
     
     savedData = data;
+    NSString *decoded = [[NSString alloc] initWithData:data encoding:self.csvConfig.encoding];
+    NSRange newline = decoded ? [decoded rangeOfCharacterFromSet:NSCharacterSet.newlineCharacterSet] : NSMakeRange(NSNotFound, 0);
+    if (newline.location != NSNotFound) {
+        self.csvConfig.lineEnding = [decoded substringWithRange:newline];
+        if ([self.csvConfig.lineEnding isEqual:@"\r"] && newline.location + 1 < decoded.length && [decoded characterAtIndex:newline.location + 1] == '\n') self.csvConfig.lineEnding = @"\r\n";
+    }
+    self.csvConfig.trailingNewline = decoded.length && [NSCharacterSet.newlineCharacterSet characterIsMember:[decoded characterAtIndex:decoded.length - 1]];
+    self.csvConfig.utf8BOM = self.csvConfig.encoding == NSUTF8StringEncoding && data.length >= 3 && memcmp(data.bytes, "\xef\xbb\xbf", 3) == 0;
+    readingError = nil;
+
 	
 	NSError *error = nil;
 	if (![self reloadDataWithError:&error]) {
 		readingError = error;
 		if (dataCell) [self displayError:error];
-	}
+    } else {
+        originalRows = [[NSArray alloc] initWithArray:_data copyItems:YES];
+        originalConfig = self.csvConfig.copy;
+        originalHeaders = columnNames.copy;
+        originalColumnCount = _maxColumnNumber;
+    }
 	
 	return YES;
 }
@@ -266,7 +300,7 @@
     NSTextFieldCell *textCell = cell;
     NSArray *rowArray = [_data objectAtIndex:rowIndex];
     if(rowArray.count > tableColumn.identifier.integerValue){
-        if([rowArray[tableColumn.identifier.integerValue] isKindOfClass:[NSDecimalNumber class]]){
+        if([self.csvConfig isNumericText:rowArray[tableColumn.identifier.integerValue]]){
             textCell.alignment = NSTextAlignmentRight;
         }else{
             textCell.alignment = NSTextAlignmentLeft;
@@ -278,7 +312,7 @@
     
     NSMutableArray *rowArray = _data[rowIndex];
     if([rowArray count] <= tableColumn.identifier.integerValue) {
-        for(NSUInteger i = rowArray.count; i <= tableColumn.identifier.integerValue+1; ++i){
+        for(NSUInteger i = rowArray.count; i <= tableColumn.identifier.integerValue; ++i){
             [rowArray addObject:@""];
         }
     }
@@ -289,13 +323,8 @@
         [self dataGotEdited];
     }
     
-    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"^\\s*[+-]?(\\d+\\%@?\\d*|\\d*\\%@?\\d+)([eE][+-]?\\d+)?\\s*$",self.csvConfig.decimalMark,self.csvConfig.decimalMark] options:0 error:NULL];
-    NSString *userInputValue = (NSString *)object;
-    if([regex numberOfMatchesInString:userInputValue options:0 range:NSMakeRange(0, [userInputValue length])] == 1){
-        rowArray[tableColumn.identifier.integerValue] = [NSDecimalNumber decimalNumberWithString:userInputValue locale:@{NSLocaleDecimalSeparator:self.csvConfig.decimalMark}];
-    }else{
-        rowArray[tableColumn.identifier.integerValue] = userInputValue;
-    }
+    // CSV has no cell types: identifiers, decimal spelling and whitespace are literal text.
+    rowArray[tableColumn.identifier.integerValue] = [object isKindOfClass:NSString.class] ? object : [object description] ?: @"";
     
     _data[rowIndex] = rowArray;
     if (shouldReload) [self.tableView reloadData];
@@ -316,6 +345,9 @@
     NSMutableArray *columnsOrder = [[NSMutableArray alloc] init];
     for(NSTableColumn *col in self.tableView.tableColumns) {
         [columnsOrder addObject:col.identifier];
+    }
+    if (!self.tableView) {
+        for (NSUInteger i = 0; i < _maxColumnNumber; i++) [columnsOrder addObject:@(i)];
     }
     return columnsOrder.copy;
 }
@@ -353,6 +385,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
                                                 columnsOrder:[self getColumnsOrder]
                                                configuration:tabSeparatedCSVConfiguration];
     NSString *tabSeparatedCSV = [writer writeString];
+    if (!tabSeparatedCSV) return NO;
     [pboard setString:tabSeparatedCSV forType:NSPasteboardTypeTabularText];
     [pboard setString:tabSeparatedCSV forType:NSPasteboardTypeString];
     
@@ -1140,6 +1173,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
 			NSData *data = [self dataWithCSVConfig:accessoryViewController.config error:&error];
 			if (!data) {
 				[self presentError:error modalForWindow:window delegate:nil didPresentSelector:NULL contextInfo:NULL];
+                return;
 			}
 			BOOL success = [data writeToURL:[savePanel URL] options:NSDataWritingAtomic error:&error];
 			if (!success) {

@@ -13,9 +13,11 @@ This is a community fork of [jakob/TableTool](https://github.com/jakob/TableTool
 - **Language** menu: System Default, English, or 繁體中文. Save documents and reopen the app after changing it.
 - Traditional Chinese **Big5** added to the encoding menu.
 - Separate name (**Table Tool Native**) and bundle ID, so the original app can stay installed.
-- Regression coverage for Big5, localized format controls, and a real document open/edit/save/reopen workflow, alongside the original tests.
+- Literal cell text throughout opening, editing, pasting and saving: leading zeroes, long identifiers, trailing decimal zeroes, exponent spelling and whitespace stay intact.
+- Byte-identical unchanged saves; safe failure for unrepresentable encodings or unsafe unquoted exports.
+- Regression coverage for data preservation, Big5, localized controls and real document workflows.
 
-![Traditional Chinese interface](snapshots/v1.3.0/document-zh-Hant.png)
+![Traditional Chinese interface](snapshots/v1.3.1/document-zh-Hant.png)
 
 ## Install
 
@@ -40,7 +42,11 @@ The app is written to `build/Distribution-arm64/Build/Products/Release/Table Too
 
 Open, edit, add/remove/reorder rows and columns, undo, choose encoding and delimiters, and convert CSV files. The app reads and writes user-selected local files; it has no built-in analytics or cloud upload.
 
-The upstream CSV engine automatically infers numeric values. **Numeric formatting, including leading zeroes, may be normalized.** Keep the original file and check converted copies when working with identifiers or account numbers. This release changes compatibility and localization, not that underlying parsing policy.
+**Cells are literal text.** `00123`, `1.2300`, `1e003`, `+0002` and long numeric identifiers are not converted to numbers. Decimal-mark settings now affect format scoring/alignment only; they do not rewrite cell text.
+
+Saving an unchanged document with unchanged format/column order returns its original bytes. After edits, the app preserves cell values, encoding, UTF-8 BOM and the detected record-ending style; quoting is regenerated and mixed record endings can be normalized. Ragged rows keep their missing trailing cells. Exporting without quotes is rejected if a cell contains the delimiter or a newline. Characters unavailable in the chosen encoding cause a save error instead of lossy substitution.
+
+Format/encoding detection remains heuristic. Check the preview and choose the correct format, particularly for ambiguous legacy encodings such as Big5. These tested guarantees cover supported CSV dialects, not every malformed file or a byte-identical rewrite after edits. See [validation](docs/VALIDATION.md).
 
 ## Credits and license
 

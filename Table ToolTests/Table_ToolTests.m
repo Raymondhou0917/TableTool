@@ -21,10 +21,204 @@
 
 @end
 
+@interface Document (DataPreservationTests)
+-(BOOL)reloadDataWithError:(NSError **)error;
+@end
+
 @interface NativeIntegrationTests : XCTestCase
 @end
 
 @implementation NativeIntegrationTests
+
+- (void)testLiteralCellTextSurvivesReadWriteAcrossDialectsAndEncodings {
+    NSArray *values = @[@"00123", @"000", @"-0007", @"+8860912345678", @"1.2300",
+                        @"1e003", @"12345678901234567890123456789012345678901234567890",
+                        @" 00123 ", @"2026-10-16", @"=SUM(A1:A2)", @"繁體中文",
+                        @"a,b;\t\"quoted\"\\path", @"line1\r\nline2", @""];
+    NSArray *encodings = @[@(NSUTF8StringEncoding), @(NSUTF16StringEncoding),
+                           @(CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingBig5))];
+    for (NSNumber *encoding in encodings) {
+        for (NSString *separator in @[@",", @";", @"\t"]) {
+            for (NSString *escape in @[@"\"", @"\\"]) {
+                CSVConfiguration *config = [[CSVConfiguration alloc] init];
+                config.encoding = encoding.unsignedIntegerValue;
+                config.columnSeparator = separator;
+                config.escapeCharacter = escape;
+                NSMutableArray *order = [NSMutableArray array];
+                for (NSUInteger i = 0; i < values.count; i++) [order addObject:@(i)];
+                CSVWriter *writer = [[CSVWriter alloc] initWithDataArray:@[values] columnsOrder:order configuration:config];
+                NSError *error = nil;
+                NSData *encoded = [writer writeDataWithError:&error];
+                XCTAssertNotNil(encoded);
+                CSVReader *reader = [[CSVReader alloc] initWithData:encoded configuration:config];
+                XCTAssertEqualObjects([reader readLineWithError:&error], values, @"%@ / %@ / %@", encoding, separator, escape);
+                XCTAssertTrue(reader.atEnd);
+                XCTAssertNil(error);
+            }
+        }
+    }
+}
+
+- (void)testPastedTextKeepsLeadingZerosAndColumnMapping {
+    CSVReader *reader = [[CSVReader alloc] initWithString:@"00123\t1.2300\t1e03\r\n0007\t+0002\t 004 " configuration:[[CSVConfiguration alloc] init]];
+    XCTAssertEqualObjects(([reader readLineForPastingTo:@[@2, @0, @1] maxColumnIndex:3]), (@[@"1.2300", @"1e03", @"00123"]));
+    XCTAssertEqualObjects(([reader readLineForPastingTo:@[@2, @0, @1] maxColumnIndex:3]), (@[@"+0002", @" 004 ", @"0007"]));
+    XCTAssertTrue(reader.atEnd);
+}
+
+- (void)testWriterPreservesRaggedRowsAndDoesNotMutateInput {
+    NSArray *rows = @[@[@"001", @"x", @""], @[@"002"], @[@""], @[@"003", @"", @""]];
+    CSVConfiguration *config = [[CSVConfiguration alloc] init];
+    CSVWriter *writer = [[CSVWriter alloc] initWithDataArray:rows columnsOrder:@[@0, @1, @2] configuration:config];
+    NSError *error = nil;
+    CSVReader *reader = [[CSVReader alloc] initWithData:[writer writeDataWithError:&error] configuration:config];
+    for (NSArray *row in rows) XCTAssertEqualObjects([reader readLineWithError:&error], row);
+    XCTAssertNil(error);
+    XCTAssertEqualObjects(rows[1], (@[@"002"]));
+}
+
+- (void)testUnsafeUnquotedOutputAndUnrepresentableEncodingAreRejected {
+    CSVConfiguration *config = [[CSVConfiguration alloc] init];
+    config.quoteCharacter = @"";
+    config.escapeCharacter = @"";
+    for (NSString *unsafe in @[@"two,columns", @"two\nrows", @"two\rrows", @"two\u2028rows"]) {
+        CSVWriter *writer = [[CSVWriter alloc] initWithDataArray:@[@[unsafe]] columnsOrder:@[@0] configuration:config];
+        NSError *error = nil;
+        XCTAssertNil([writer writeDataWithError:&error]);
+        XCTAssertNotNil(error);
+    }
+    config.quoteCharacter = @"\"";
+    config.escapeCharacter = @"\"";
+    config.encoding = NSASCIIStringEncoding;
+    CSVWriter *writer = [[CSVWriter alloc] initWithDataArray:@[@[@"繁體中文"]] columnsOrder:@[@0] configuration:config];
+    XCTAssertNil([writer writeDataWithError:NULL]);
+}
+
+- (void)testDocumentLeadingZerosNoOpSaveEditingUndoAndReopen {
+    NSString *source = @"ID,Amount,Note,LongNumber\r\n00123,1.2300,\"a,b\",12345678901234567890123456789012345678901234567890\r\n00007,1e003,\"line1\nline2\",+0002\r\n";
+    NSData *sourceData = [source dataUsingEncoding:NSUTF8StringEncoding];
+    NSURL *directory = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString]];
+    NSError *error = nil;
+    XCTAssertTrue([NSFileManager.defaultManager createDirectoryAtURL:directory withIntermediateDirectories:YES attributes:nil error:&error]);
+    NSURL *input = [directory URLByAppendingPathComponent:@"LeadingZeros.csv"];
+    XCTAssertTrue([sourceData writeToURL:input options:NSDataWritingAtomic error:&error]);
+    Document *document = [[Document alloc] init];
+    XCTAssertTrue([document readFromURL:input ofType:@"DocumentType" error:&error]);
+    [document makeWindowControllers];
+    XCTAssertNotNil(document.windowControllers.firstObject.window);
+    XCTAssertTrue(document.csvConfig.firstRowAsHeader);
+    NSArray *expected = @[@[@"00123", @"1.2300", @"a,b", @"12345678901234567890123456789012345678901234567890"],
+                          @[@"00007", @"1e003", @"line1\nline2", @"+0002"]];
+    XCTAssertEqualObjects(document.data, expected);
+    XCTAssertEqualObjects([document dataOfType:@"DocumentType" error:&error], sourceData);
+    [document.undoManager removeAllActions];
+    [document.undoManager beginUndoGrouping];
+    [document tableView:document.tableView setObjectValue:@"000009" forTableColumn:document.tableView.tableColumns[0] row:0];
+    [document.undoManager endUndoGrouping];
+    XCTAssertEqualObjects(document.data[0][0], @"000009");
+    [document.undoManager undo];
+    XCTAssertEqualObjects(document.data, expected);
+    [document.undoManager redo];
+    NSMutableArray *edited = [NSMutableArray arrayWithArray:expected];
+    edited[0] = @[@"000009", @"1.2300", @"a,b", @"12345678901234567890123456789012345678901234567890"];
+    NSURL *output = [directory URLByAppendingPathComponent:@"Edited.csv"];
+    XCTAssertTrue([document writeToURL:output ofType:@"DocumentType" error:&error]);
+    Document *reopened = [[Document alloc] init];
+    XCTAssertTrue([reopened readFromURL:output ofType:@"DocumentType" error:&error]);
+    [reopened makeWindowControllers];
+    XCTAssertNotNil(reopened.windowControllers.firstObject.window);
+    XCTAssertEqualObjects(reopened.data, edited);
+    XCTAssertEqualObjects([NSData dataWithContentsOfURL:input], sourceData);
+    XCTAssertNil(error);
+    [document updateChangeCount:NSChangeCleared];
+    [reopened updateChangeCount:NSChangeCleared];
+    [document close];
+    [reopened close];
+}
+
+- (void)testDocumentBOMEncodingsAndSaveBeforeWindowLoads {
+    NSString *source = @"ID,Note\r\n00123,繁體中文\r\n00007,001.2300\r\n";
+    for (NSNumber *encoding in @[@(NSUTF8StringEncoding), @(NSUTF16StringEncoding), @(CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingBig5))]) {
+        NSMutableData *bytes = [NSMutableData data];
+        if (encoding.unsignedIntegerValue == NSUTF8StringEncoding) [bytes appendBytes:"\xef\xbb\xbf" length:3];
+        [bytes appendData:[source dataUsingEncoding:encoding.unsignedIntegerValue]];
+        NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".csv"]]];
+        NSError *error = nil;
+        XCTAssertTrue([bytes writeToURL:url options:NSDataWritingAtomic error:&error]);
+        Document *document = [[Document alloc] init];
+        XCTAssertTrue([document readFromURL:url ofType:@"DocumentType" error:&error]);
+        // Legacy single-byte encodings can be ambiguous: exercise explicit Big5 selection.
+        if (encoding.unsignedIntegerValue == CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingBig5)) {
+            document.csvConfig.encoding = encoding.unsignedIntegerValue;
+            XCTAssertTrue([document reloadDataWithError:&error]);
+        } else {
+            XCTAssertEqualObjects([document dataOfType:@"DocumentType" error:&error], bytes);
+        }
+        [document makeWindowControllers];
+        XCTAssertNotNil(document.windowControllers.firstObject.window);
+        XCTAssertEqualObjects(document.data, (@[@[@"00123", @"繁體中文"], @[@"00007", @"001.2300"]]));
+        [document tableView:document.tableView setObjectValue:@"000009" forTableColumn:document.tableView.tableColumns[0] row:0];
+        NSData *edited = [document dataOfType:@"DocumentType" error:&error];
+        XCTAssertNotNil(edited);
+        CSVReader *reader = [[CSVReader alloc] initWithData:edited configuration:document.csvConfig];
+        XCTAssertEqualObjects([reader readLineWithError:&error], (@[@"ID", @"Note"]));
+        XCTAssertEqualObjects([reader readLineWithError:&error], (@[@"000009", @"繁體中文"]));
+        XCTAssertEqualObjects([reader readLineWithError:&error], (@[@"00007", @"001.2300"]));
+        if (encoding.unsignedIntegerValue == NSUTF8StringEncoding) XCTAssertEqual(memcmp(bytes.bytes, edited.bytes, 3), 0);
+        XCTAssertNil(error);
+        [document updateChangeCount:NSChangeCleared];
+        [document close];
+    }
+}
+
+- (void)testBlankRecordsAndTrailingEmptyFields {
+    for (NSString *source in @[@"\n\n", @"001,,\n\n002,,\n", @"001,,\r\n\r\n002,,\r\n"]) {
+        CSVConfiguration *configuration = [[CSVConfiguration alloc] init];
+        configuration.quoteCharacter = @"";
+        CSVReader *reader = [[CSVReader alloc] initWithString:source configuration:configuration];
+        NSMutableArray *rows = [NSMutableArray array];
+        while (!reader.atEnd) [rows addObject:[reader readLineWithError:NULL]];
+        CSVWriter *writer = [[CSVWriter alloc] initWithDataArray:rows columnsOrder:@[@0, @1, @2] configuration:configuration];
+        NSData *output = [writer writeDataWithError:NULL];
+        reader = [[CSVReader alloc] initWithData:output configuration:configuration];
+        for (NSArray *row in rows) XCTAssertEqualObjects([reader readLineWithError:NULL], row);
+        XCTAssertTrue(reader.atEnd);
+    }
+}
+
+- (void)testFailedDocumentSaveLeavesExistingFileUntouched {
+    NSData *source = [@"ID,Note\n00123,original" dataUsingEncoding:NSUTF8StringEncoding];
+    NSURL *url = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID.UUID.UUIDString stringByAppendingString:@".csv"]]];
+    NSError *error = nil;
+    XCTAssertTrue([source writeToURL:url options:NSDataWritingAtomic error:&error]);
+    Document *document = [[Document alloc] init];
+    XCTAssertTrue([document readFromURL:url ofType:@"DocumentType" error:&error]);
+    [document makeWindowControllers];
+    XCTAssertNotNil(document.windowControllers.firstObject.window);
+    [document tableView:document.tableView setObjectValue:@"two,columns" forTableColumn:document.tableView.tableColumns[1] row:0];
+    document.csvConfig.quoteCharacter = @"";
+    XCTAssertFalse([document writeToURL:url ofType:@"DocumentType" error:&error]);
+    XCTAssertNotNil(error);
+    XCTAssertEqualObjects([NSData dataWithContentsOfURL:url], source);
+    document.csvConfig.quoteCharacter = @"\"";
+    document.csvConfig.encoding = NSASCIIStringEncoding;
+    [document tableView:document.tableView setObjectValue:@"繁體中文" forTableColumn:document.tableView.tableColumns[1] row:0];
+    error = nil;
+    XCTAssertFalse([document writeToURL:url ofType:@"DocumentType" error:&error]);
+    XCTAssertNotNil(error);
+    XCTAssertEqualObjects([NSData dataWithContentsOfURL:url], source);
+    [document updateChangeCount:NSChangeCleared];
+    [document close];
+}
+
+- (void)testReorderedColumnsPreserveLiteralValues {
+    CSVConfiguration *configuration = [[CSVConfiguration alloc] init];
+    NSArray *rows = @[@[@"00123", @"1.2300", @"+0002"]];
+    CSVWriter *writer = [[CSVWriter alloc] initWithDataArray:rows columnsOrder:@[@2, @0, @1] configuration:configuration];
+    CSVReader *reader = [[CSVReader alloc] initWithData:[writer writeDataWithError:NULL] configuration:configuration];
+    XCTAssertEqualObjects([reader readLineWithError:NULL], (@[@"+0002", @"00123", @"1.2300"]));
+    XCTAssertEqualObjects(rows[0], (@[@"00123", @"1.2300", @"+0002"]));
+}
 
 - (void)testBig5TraditionalChineseRoundTrip {
     CSVConfiguration *configuration = [[CSVConfiguration alloc] init];
@@ -58,7 +252,7 @@
 }
 
 - (void)testLocalizedDocumentEditingAndSaveRoundTrip {
-    NSString *source = @"Name,Note,Count\nRaymond,\"繁體中文，English\",42\n柚子,\"line one\nline two\",7";
+    NSString *source = @"Name,Note,Count\nRaymond,\"繁體中文，English\",00042\n柚子,\"line one\nline two\",7";
     NSURL *directory = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString]];
     NSError *error = nil;
     XCTAssertTrue([NSFileManager.defaultManager createDirectoryAtURL:directory withIntermediateDirectories:YES attributes:nil error:&error]);
@@ -132,7 +326,8 @@
         XCTAssertEqual(line.count, 3, "Read line should have 3 objects.");
         if(count == 3){
             for(int i=0;i<3;i++){
-                XCTAssertTrue([line[i] isKindOfClass:[NSDecimalNumber class]], "Last line should contain 3 decimal numbers.");
+                XCTAssertTrue([line[i] isKindOfClass:[NSString class]], "Numeric-looking cells must retain literal text.");
+                XCTAssertTrue([config isNumericText:line[i]]);
             }
         }
     }
@@ -154,7 +349,8 @@
         XCTAssertEqual(line.count, 3, "Read line should have 3 objects.");
         if(count == 3){
             for(int i=0;i<3;i++){
-                XCTAssertTrue([line[i] isKindOfClass:[NSDecimalNumber class]], "Last line should contain 3 decimal numbers.");
+                XCTAssertTrue([line[i] isKindOfClass:[NSString class]], "Numeric-looking cells must retain literal text.");
+                XCTAssertTrue([config isNumericText:line[i]]);
             }
         }
     }
@@ -174,7 +370,8 @@
         XCTAssertEqual(line.count, 3, "Read line should have 3 objects.");
         if(count == 2 || count == 3){
             for(int i=0;i<3;i++){
-                XCTAssertTrue([line[i] isKindOfClass:[NSDecimalNumber class]], @"Line should contain 3 decimal numbers.");
+                XCTAssertTrue([line[i] isKindOfClass:[NSString class]], @"Numeric-looking cells must retain literal text.");
+                XCTAssertTrue([config isNumericText:line[i]]);
             }
         }
     }
@@ -192,7 +389,8 @@
         count++;
         XCTAssertEqual(line.count, 2, "Read line should have 2 objects.");
         if(count == 2){
-            XCTAssertTrue([line[0] isKindOfClass:[NSDecimalNumber class]], @"First object should decimal number.");
+            XCTAssertTrue([line[0] isKindOfClass:[NSString class]], @"Cell remains text.");
+            XCTAssertTrue([config isNumericText:line[0]]);
             XCTAssertFalse([line[1] isKindOfClass:[NSDecimalNumber class]], @"Second object should not be decimal number.");
         }
     }
@@ -211,7 +409,8 @@
         count++;
         XCTAssertEqual(line.count, 2, "Read line should have 2 objects.");
         if(count == 2){
-            XCTAssertTrue([line[0] isKindOfClass:[NSDecimalNumber class]], @"First object should decimal number.");
+            XCTAssertTrue([line[0] isKindOfClass:[NSString class]], @"Cell remains text.");
+            XCTAssertTrue([config isNumericText:line[0]]);
             XCTAssertFalse([line[1] isKindOfClass:[NSDecimalNumber class]], @"Second object should not be decimal number.");
         }
     }

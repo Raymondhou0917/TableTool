@@ -14,6 +14,7 @@
     NSArray *readerArray;
     NSMutableArray *firstRowArray;
     NSMutableArray *readLines;
+    NSStringEncoding preferredEncoding;
 }
 
 -(instancetype)initWithData:(NSData *)data {
@@ -101,6 +102,7 @@
 }
 
 -(void)setEncoding:(NSStringEncoding)encoding {
+    if (!readerArray) preferredEncoding = encoding;
 	for(CSVReader *reader in readerArray){
 		[reader reset];
 		reader.config.encoding = encoding;
@@ -126,6 +128,12 @@
 							 ];
 	}
 	
+    if (preferredEncoding) {
+        NSMutableArray *ordered = encodingTestList.mutableCopy;
+        [ordered removeObject:@(preferredEncoding)];
+        [ordered insertObject:@(preferredEncoding) atIndex:0];
+        encodingTestList = ordered;
+    }
     for (NSInteger i = 0; i < encodingTestList.count; ++i) {
         [self setEncoding:[encodingTestList[i] unsignedIntegerValue]];
         if([self useSimpleHeuristic]){
@@ -176,7 +184,7 @@
     for(int i = 0; i < readLines.count; i++){
         NSMutableArray * line = readLines[i];
         for(int j = 0; j < line.count; j++){
-            if([line[j] isKindOfClass:[NSDecimalNumber class]]){
+            if([((CSVReader *)readerArray[index]).config isNumericText:line[j]]){
                 numbers++;
                 if(i == 0) {
                     [firstRowArray replaceObjectAtIndex:index withObject:[NSNumber numberWithBool:NO]];

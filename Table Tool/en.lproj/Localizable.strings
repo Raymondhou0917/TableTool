@@ -41,3 +41,5 @@
 "Unicode (UTF-8)" = "Unicode (UTF-8)";
 "Western (Mac OS Roman)" = "Western (Mac OS Roman)";
 "Western (Windows Latin 1)" = "Western (Windows Latin 1)";
+
+"Enable quotes before saving cells containing separators or newlines." = "Enable quotes before saving cells containing separators or newlines.";

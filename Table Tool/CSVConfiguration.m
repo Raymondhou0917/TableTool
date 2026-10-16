@@ -19,6 +19,7 @@
         _escapeCharacter = @"\"";
         _decimalMark = @".";
         _firstRowAsHeader = NO;
+        _lineEnding = @"\n";
     }
     return self;
 }
@@ -31,7 +32,23 @@
     copy->_escapeCharacter = _escapeCharacter;
     copy->_quoteCharacter = _quoteCharacter;
     copy->_firstRowAsHeader = _firstRowAsHeader;
+    copy->_lineEnding = _lineEnding;
+    copy->_trailingNewline = _trailingNewline;
+    copy->_utf8BOM = _utf8BOM;
     return copy;
+}
+
+-(BOOL)isNumericText:(NSString *)text {
+    NSString *mark = [NSRegularExpression escapedPatternForString:self.decimalMark];
+    NSString *pattern = [NSString stringWithFormat:@"^\\s*[+-]?(\\d+%@?\\d*|\\d*%@?\\d+)([eE][+-]?\\d+)?\\s*$", mark, mark];
+    return text.length && [text rangeOfString:pattern options:NSRegularExpressionSearch].location != NSNotFound;
+}
+
+-(BOOL)hasSameFormatAs:(CSVConfiguration *)other {
+    return self.encoding == other.encoding && self.firstRowAsHeader == other.firstRowAsHeader &&
+        [self.columnSeparator isEqual:other.columnSeparator] && [self.quoteCharacter isEqual:other.quoteCharacter] &&
+        [self.escapeCharacter isEqual:other.escapeCharacter] && [self.decimalMark isEqual:other.decimalMark] &&
+        [self.lineEnding isEqual:other.lineEnding] && self.trailingNewline == other.trailingNewline && self.utf8BOM == other.utf8BOM;
 }
 
 -(NSString *)description {

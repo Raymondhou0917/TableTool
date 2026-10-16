@@ -26,65 +26,60 @@
 }
 
 -(NSString *)writeString {
-    
-    NSMutableString *dataString = [[NSMutableString alloc]init];
-    
-    for(NSMutableArray *lineArray in _dataArray) {
-        
-        for(NSString *columndIdentifier in _columnsOrder) {
-            
-            for(NSUInteger i = lineArray.count; i <= columndIdentifier.integerValue;i++){
-                [lineArray addObject:@""];
-            }
-            
-            NSString *cellString;
-            if([lineArray[columndIdentifier.integerValue] isKindOfClass:[NSDecimalNumber class]]){
-                cellString = [lineArray[columndIdentifier.integerValue] descriptionWithLocale:@{NSLocaleDecimalSeparator:_config.decimalMark}];
-            }else{
-                cellString = lineArray[columndIdentifier.integerValue];
-            }
-            NSMutableString *temporaryCellValue = [[NSMutableString alloc]init];
-
-            if([_config.quoteCharacter isEqualToString:@"\""]) {
-                [temporaryCellValue appendString:cellString];
-                if(![_config.escapeCharacter isEqualToString:_config.quoteCharacter]){
-                    [temporaryCellValue replaceOccurrencesOfString:_config.escapeCharacter withString:[NSString stringWithFormat:@"%@%@",_config.escapeCharacter,_config.escapeCharacter] options:0 range:NSMakeRange(0, temporaryCellValue.length)];
-                }
-                [temporaryCellValue replaceOccurrencesOfString:_config.quoteCharacter withString:[NSString stringWithFormat:@"%@%@",_config.escapeCharacter,_config.quoteCharacter] options:0 range:NSMakeRange(0, temporaryCellValue.length)];
-                [temporaryCellValue insertString:[NSString stringWithFormat:@"%@",_config.quoteCharacter] atIndex:0];
-                [temporaryCellValue appendString:_config.quoteCharacter];
-                [dataString appendString:temporaryCellValue];
-                
-            } else {
-                [dataString appendString:cellString];
-            }
-            [dataString appendString:_config.columnSeparator];
+    NSMutableArray *records = [NSMutableArray array];
+    for (NSArray *row in _dataArray) {
+        // Missing trailing cells stay missing. Do not pad or mutate the document while saving.
+        NSUInteger width = 0;
+        for (NSUInteger i = 0; i < _columnsOrder.count; i++) {
+            if ([_columnsOrder[i] integerValue] < row.count) width = i + 1;
         }
-        [dataString deleteCharactersInRange:NSMakeRange([dataString length] -1,1)];
-        [dataString appendString:@"\n"];
+        NSMutableArray *cells = [NSMutableArray array];
+        for (NSUInteger i = 0; i < width; i++) {
+            NSUInteger index = [_columnsOrder[i] integerValue];
+            NSString *cell = index < row.count ? row[index] : @"";
+            if ([_config.quoteCharacter isEqualToString:@"\""]) {
+                NSMutableString *escaped = cell.mutableCopy;
+                if (![_config.escapeCharacter isEqualToString:_config.quoteCharacter]) {
+                    [escaped replaceOccurrencesOfString:_config.escapeCharacter withString:[_config.escapeCharacter stringByAppendingString:_config.escapeCharacter] options:0 range:NSMakeRange(0, escaped.length)];
+                }
+                [escaped replaceOccurrencesOfString:@"\"" withString:[_config.escapeCharacter stringByAppendingString:@"\""] options:0 range:NSMakeRange(0, escaped.length)];
+                [cells addObject:[NSString stringWithFormat:@"\"%@\"", escaped]];
+            } else {
+                // Without quoting, a separator or newline would silently create new cells/rows.
+                NSMutableCharacterSet *newlines = NSCharacterSet.newlineCharacterSet.mutableCopy;
+                [newlines removeCharactersInString:@"\x0b\x0c"];
+                if ([cell containsString:_config.columnSeparator] || [cell rangeOfCharacterFromSet:newlines].location != NSNotFound) return nil;
+                [cells addObject:cell];
+            }
+        }
+        [records addObject:[cells componentsJoinedByString:_config.columnSeparator]];
     }
-    
-    if(dataString.length != 0){
-        [dataString deleteCharactersInRange:NSMakeRange([dataString length] -1,1)];
-    }else{
-        [dataString appendString:@""];
-    }
-    
-    return dataString;
+    NSMutableString *result = [[records componentsJoinedByString:_config.lineEnding] mutableCopy];
+    // A final one-cell empty row needs a terminator to distinguish it from EOF.
+    BOOL finalEmptyRecord = records.count && [records.lastObject length] == 0;
+    if (records.count && (_config.trailingNewline || finalEmptyRecord)) [result appendString:_config.lineEnding];
+    return result;
 }
 
 -(NSData *)writeDataWithError:(NSError *__autoreleasing *)outError {
     NSString *dataString = [self writeString];
-    
-    NSData *finalData = [dataString dataUsingEncoding:_config.encoding];
-    if(finalData == nil){
-        if(outError != NULL) {
-            *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:4 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not write data", nil), NSLocalizedRecoverySuggestionErrorKey:errorCode4}];
-        }
+    if (!dataString) {
+        if (outError) *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:6 userInfo:@{
+            NSLocalizedDescriptionKey:NSLocalizedString(@"Could not write data", nil),
+            NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Enable quotes before saving cells containing separators or newlines.", nil)}];
         return nil;
     }
-    
-    return finalData;
+    NSData *encoded = [dataString dataUsingEncoding:_config.encoding allowLossyConversion:NO];
+    if (!encoded) {
+        if (outError) *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:4 userInfo:@{NSLocalizedDescriptionKey:NSLocalizedString(@"Could not write data", nil), NSLocalizedRecoverySuggestionErrorKey:errorCode4}];
+        return nil;
+    }
+    if (_config.utf8BOM && _config.encoding == NSUTF8StringEncoding) {
+        NSMutableData *withBOM = [NSMutableData dataWithBytes:"\xef\xbb\xbf" length:3];
+        [withBOM appendData:encoded];
+        return withBOM;
+    }
+    return encoded;
 }
 
 @end

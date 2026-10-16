@@ -16,6 +16,13 @@
 @property NSString *escapeCharacter;
 @property NSString *decimalMark;
 @property BOOL firstRowAsHeader;
+@property NSString *lineEnding;
+@property BOOL trailingNewline;
+@property BOOL utf8BOM;
+
+// Classification is used for format scoring/alignment only; cell text is never coerced.
+-(BOOL)isNumericText:(NSString *)text;
+-(BOOL)hasSameFormatAs:(CSVConfiguration *)other;
 
 +(NSArray<NSArray*>*)supportedEncodings;
 

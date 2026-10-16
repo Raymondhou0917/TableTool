@@ -41,3 +41,5 @@
 "Unicode (UTF-8)" = "Unicode（UTF-8）";
 "Western (Mac OS Roman)" = "西歐語系（Mac OS Roman）";
 "Western (Windows Latin 1)" = "西歐語系（Windows Latin 1）";
+
+"Enable quotes before saving cells containing separators or newlines." = "儲存含有分隔符號或換行的儲存格前，請先啟用引號。";
