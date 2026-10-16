@@ -1,0 +1,9 @@
+
+/* Class = "NSTextFieldCell"; title = "warning"; ObjectID = "DF6-gq-mgp"; */
+"DF6-gq-mgp.title" = "警告";
+
+/* Class = "NSTextFieldCell"; title = "suggestion"; ObjectID = "Ogl-ZW-oKU"; */
+"Ogl-ZW-oKU.title" = "建議";
+
+/* Class = "NSBox"; title = "Box"; ObjectID = "sMA-bY-Y05"; */
+"sMA-bY-Y05.title" = "方框";

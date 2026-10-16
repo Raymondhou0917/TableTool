@@ -1,0 +1,45 @@
+
+/* Class = "NSTextFieldCell"; title = "Encoding"; ObjectID = "2qh-Ft-dH3"; */
+"2qh-Ft-dH3.title" = "編碼";
+
+/* Class = "NSTextFieldCell"; title = "Quote"; ObjectID = "A2l-Uw-arU"; */
+"A2l-Uw-arU.title" = "引號";
+
+/* Class = "NSSegmentedCell"; C2o-jP-EF2.ibShadowedLabels[0] = ","; ObjectID = "C2o-jP-EF2"; */
+"C2o-jP-EF2.ibShadowedLabels[0]" = ",";
+
+/* Class = "NSSegmentedCell"; C2o-jP-EF2.ibShadowedLabels[1] = ";"; ObjectID = "C2o-jP-EF2"; */
+"C2o-jP-EF2.ibShadowedLabels[1]" = ";";
+
+/* Class = "NSSegmentedCell"; C2o-jP-EF2.ibShadowedLabels[2] = "⇥"; ObjectID = "C2o-jP-EF2"; */
+"C2o-jP-EF2.ibShadowedLabels[2]" = "⇥";
+
+/* Class = "NSSegmentedCell"; C2o-jP-EF2.ibShadowedLabels[3] = "|"; ObjectID = "C2o-jP-EF2"; */
+"C2o-jP-EF2.ibShadowedLabels[3]" = "|";
+
+/* Class = "NSSegmentedCell"; XAD-11-Jjs.ibShadowedLabels[0] = "\"\""; ObjectID = "XAD-11-Jjs"; */
+"XAD-11-Jjs.ibShadowedLabels[0]" = "\"\"";
+
+/* Class = "NSSegmentedCell"; XAD-11-Jjs.ibShadowedLabels[1] = "\\\""; ObjectID = "XAD-11-Jjs"; */
+"XAD-11-Jjs.ibShadowedLabels[1]" = "\\\"";
+
+/* Class = "NSSegmentedCell"; XAD-11-Jjs.ibShadowedLabels[2] = "none"; ObjectID = "XAD-11-Jjs"; */
+"XAD-11-Jjs.ibShadowedLabels[2]" = "無";
+
+/* Class = "NSMenuItem"; title = "No String Encodings Configured"; ObjectID = "azY-g1-sDt"; */
+"azY-g1-sDt.title" = "尚未設定文字編碼";
+
+/* Class = "NSButtonCell"; title = "Header"; ObjectID = "cgT-F0-Q53"; */
+"cgT-F0-Q53.title" = "首列為標題";
+
+/* Class = "NSSegmentedCell"; d4a-n0-Zii.ibShadowedLabels[0] = "."; ObjectID = "d4a-n0-Zii"; */
+"d4a-n0-Zii.ibShadowedLabels[0]" = ".";
+
+/* Class = "NSSegmentedCell"; d4a-n0-Zii.ibShadowedLabels[1] = ","; ObjectID = "d4a-n0-Zii"; */
+"d4a-n0-Zii.ibShadowedLabels[1]" = ",";
+
+/* Class = "NSTextFieldCell"; title = "Separator"; ObjectID = "g3k-Et-CPk"; */
+"g3k-Et-CPk.title" = "分隔符號";
+
+/* Class = "NSTextFieldCell"; title = "Decimal"; ObjectID = "rhn-U5-DWG"; */
+"rhn-U5-DWG.title" = "小數點";

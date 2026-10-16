@@ -45,7 +45,9 @@
         _config.quoteCharacter = @"";
         _config.escapeCharacter = @"";
     }
-    _config.escapeCharacter = [[self.escapeControl labelForSegment:[self.escapeControl selectedSegment]] substringToIndex:1];
+    // Labels are translated; parsing configuration must use stable segment identities.
+    _config.escapeCharacter = self.escapeControl.selectedSegment == 0 ? @"\"" :
+        (self.escapeControl.selectedSegment == 1 ? @"\\" : @"");
 	
 	_config.firstRowAsHeader = (self.useFirstRowAsHeaderCheckbox.state == NSControlStateValueOn);
 	

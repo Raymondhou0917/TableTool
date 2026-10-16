@@ -1,45 +1,49 @@
-<img style='margin: 0 auto' src="https://github.com/jakob/TableTool/raw/master/Table%20Tool/Images.xcassets/AppIcon.appiconset/icon_128x128@2x.png" width=128 height=128>
+# Table Tool Native
 
-# Table Tool 
+A small, native CSV editor for Apple Silicon Macs, with **English and Traditional Chinese** interfaces.
 
-A simple CSV editor for OS X.
+[繁體中文說明](docs/README.zh-Hant.md) · [Download](https://github.com/Raymondhou0917/TableTool/releases) · [Upstream and credits](docs/UPSTREAM.md)
 
-Download [on the Mac App Store](https://itunes.apple.com/app/table-tool/id1122008420?mt=12).
+This is a community fork of [jakob/TableTool](https://github.com/jakob/TableTool), not the official App Store release. The original MIT license and author attribution are preserved. Andrea Brugnoli's existing [Apple Silicon PR #112](https://github.com/jakob/TableTool/pull/112) is included with its original author; this fork builds on that work rather than claiming a new ARM port from scratch.
 
-<img style='margin: 0 auto' src="https://github.com/jakob/TableTool/raw/master/Artwork/Screenshots/2016-06-08 Tabletool 1.1 Customers.jpg" width=800 height=500>
+## What changed
 
-The CSV format is a common used file format to store and exchange tabular data. 
-Almost all spreadsheet and database apps (e.g. Excel and Numbers) support it.
-Unfortunately, not all CSV files are made equal.
-CSV files use different record delimiters (comma or semicolon), character encodings, decimal separators or quoting styles.
+- Reproducible **arm64** build with a current Xcode; no Rosetta needed for this app.
+- English and Traditional Chinese menus, toolbar labels, format settings, undo actions, and error messages.
+- **Language** menu: System Default, English, or 繁體中文. Save documents and reopen the app after changing it.
+- Traditional Chinese **Big5** added to the encoding menu.
+- Separate name (**Table Tool Native**) and bundle ID, so the original app can stay installed.
+- Regression coverage for Big5, localized format controls, and a real document open/edit/save/reopen workflow, alongside the original tests.
 
-TableTool handles these issues automatically.
-It detects the specification of a CSV file for you and displays its contents in a table view.
-Using TableTool is the easy way to create, edit and convert CSV files.
+![Traditional Chinese interface](snapshots/v1.3.0/document-zh-Hant.png)
 
-## Usage
+## Install
 
-**Open Files:**
-When opening a CSV file, Table Tool detects the format specifications 
-(record delimiter, character encoding, etc.) automatically.
-You can also set the specifications manually.
+Download the `arm64.zip` from [Releases](https://github.com/Raymondhou0917/TableTool/releases), unzip it, and copy **Table Tool Native.app** to Applications.
 
-**Edit Files:**
-Edit the contents of the cells, rows and columns of the document easily in a grid based user interface.
+The release uses **ad-hoc signing and is not Apple-notarized**. macOS may require approval for this individual downloaded app in System Settings → Privacy & Security. Do not disable Gatekeeper globally. You can also build from source.
 
-**Convert Files:**
-Convert an existing CSV file to a different format.
+The deployment target is **macOS 12+**; runtime validation was performed on an **M4 Pro running macOS 27**. Other macOS versions have not been runtime-tested for this fork. This focused release uses the original light/Aqua appearance so its legacy custom cells and toolbar artwork remain readable.
 
-## Credits
+## Build and test
 
-Table Tool was made by [Sandro Peham](https://github.com/SandroPeham), 
-[Andreas Aigner](https://github.com/aigi) and 
-[Jakob Egger](https://github.com/jakob).
+Install full Xcode and select its developer directory. No package manager dependencies, API keys, or network services are needed by the app.
 
-## Mission / Project Scope / Contributing
+```sh
+bash scripts/build.sh
+bash scripts/test.sh
+```
 
-TableTool seeks to be a great and simple CSV file editor and nothing more. Any formatting options or features like formulas will be out of scope for the project. Please post an issue if something is broken ([bug](https://github.com/jakob/TableTool/labels/bug)) or you believe something is missing ([feature request](https://github.com/jakob/TableTool/labels/enhancement)) and please be prepared to [provide screenshots](https://github.com/jakob/TableTool/labels/need%20mockup). We will endeavor to quickly decide if the thing is actually broken or if the new feature belongs in the project ([help-wanted](https://github.com/jakob/TableTool/labels/help%20wanted) label). Once the help-wanted label is set, please help to work on implementation for that feature and we are happy to accept a pull request for it. We currently have more side projects than we can handle, so well documented issues and great pull requests will help move this project forward. We are happy to give commit access to consistent contributors.
+The app is written to `build/Release-arm64/Build/Products/Release/Table Tool Native.app`, and the ZIP to `dist/`. Tests run in both interface languages on the host architecture and attach native AppKit window snapshots to the result bundles.
 
-## Licence
+## CSV behavior
 
-Table Tool is distributed under the [MIT Licence](https://github.com/jakob/TableTool/blob/master/LICENSE).
+Open, edit, add/remove/reorder rows and columns, undo, choose encoding and delimiters, and convert CSV files. The app reads and writes user-selected local files; it has no built-in analytics or cloud upload.
+
+The upstream CSV engine automatically infers numeric values. **Numeric formatting, including leading zeroes, may be normalized.** Keep the original file and check converted copies when working with identifiers or account numbers. This release changes compatibility and localization, not that underlying parsing policy.
+
+## Credits and license
+
+Original Table Tool: **Sandro Peham, Andreas Aigner, and Jakob Egger**. Apple Silicon compatibility updates: **Andrea Brugnoli**. Traditional Chinese localization, build/release tooling, and integration tests: **Raymond Hou and contributors**.
+
+MIT license; see [LICENSE](LICENSE). See [docs/UPSTREAM.md](docs/UPSTREAM.md) for the provenance and scope of this fork.

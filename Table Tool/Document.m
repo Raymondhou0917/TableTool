@@ -46,7 +46,7 @@
         _maxColumnNumber = 1;
         _csvConfig = [[CSVConfiguration alloc]init];
         newFile = YES;
-        errorCode5 = @"Your are not allowed to save while the input format has an error. Configure the format manually, until no error occurs.";
+        errorCode5 = NSLocalizedString(@"The file cannot be saved while its format is invalid. Adjust the format settings until the error is resolved.", nil);
         _didSave = NO;
         
         [self initValidPBoardTypes];
@@ -122,7 +122,7 @@
 
 -(NSData*)dataWithCSVConfig:(CSVConfiguration*)config error:(NSError**)outError {
 	if(readingError){
-		NSError *error = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:5 userInfo:@{NSLocalizedDescriptionKey: @"Could not save", NSLocalizedRecoverySuggestionErrorKey:errorCode5}];
+		NSError *error = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:5 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not save", nil), NSLocalizedRecoverySuggestionErrorKey:errorCode5}];
 		[self displayError:error];
 		return nil;
 	}
@@ -257,7 +257,7 @@
 -(void)tableView:(NSTableView *)tableView setObjectValue:(id)object forTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)rowIndex {
     
     [self restoreObjectValue:object forTableColumn:tableColumn row:rowIndex reload:NO];
-    [self.undoManager setActionName:@"Edit Cell"];
+    [self.undoManager setActionName:NSLocalizedString(@"Edit Cell", nil)];
     
 }
 
@@ -303,7 +303,7 @@
 
 -(void)tableViewColumnDidMove:(NSNotification *)aNotification {
     if(!ignoreColumnDidMoveNotifications){
-        [self.undoManager setActionName:@"Move Column"];
+        [self.undoManager setActionName:NSLocalizedString(@"Move Column", nil)];
         NSNumber *oldIndex = [aNotification.userInfo valueForKey:@"NSOldColumn"];
         NSNumber *newIndex = [aNotification.userInfo valueForKey:@"NSNewColumn"];
         [self dataGotEdited];
@@ -486,7 +486,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
     }
     
     if (![self.undoManager isUndoing]) {
-        [self.undoManager setActionName:(draggedRowCount >= 2) ? @"Move Rows" : @"Move Row"];
+        [self.undoManager setActionName:(draggedRowCount >= 2) ? NSLocalizedString(@"Move Rows", nil) : NSLocalizedString(@"Move Row", nil)];
     }
 	[[self.undoManager prepareWithInvocationTarget:self.tableView] selectRowIndexes:draggedRowIndexes byExtendingSelection:NO];
     [[self.undoManager prepareWithInvocationTarget:self] addRedoStackOperationForMovingRowsAtIndexes:draggedRowIndexes toIndex:dropLocation];
@@ -651,7 +651,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
     }
     
     [self addRowAtIndex:rowIndex];
-    [self.undoManager setActionName:@"Add Line Above"];
+    [self.undoManager setActionName:NSLocalizedString(NSLocalizedString(@"Add Row Above", nil), nil)];
 }
 
 -(void)addRowBelow:(id)sender {
@@ -670,7 +670,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
     }
     
     [self addRowAtIndex:rowIndex];
-    [self.undoManager setActionName:@"Add Line below"];
+    [self.undoManager setActionName:NSLocalizedString(NSLocalizedString(@"Add Row Below", nil), nil)];
 }
 
 -(void)addColumnLeft:(id)sender {
@@ -692,7 +692,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
         columnIndex = [columnIndexes firstIndex] > [columnIndexes lastIndex] ? [columnIndexes lastIndex] : [columnIndexes firstIndex];
     }
     [self addColumnAtIndex:columnIndex];
-    [self.undoManager setActionName:@"Add Column left"];
+    [self.undoManager setActionName:NSLocalizedString(NSLocalizedString(@"Add Column Left", nil), nil)];
 }
 
 -(void)addColumnRight:(id)sender {
@@ -714,7 +714,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
         columnIndex = [columnIndexes firstIndex] > [columnIndexes lastIndex] ? [columnIndexes firstIndex]+1 : [columnIndexes lastIndex]+1;
     }
     [self addColumnAtIndex:columnIndex];
-    [self.undoManager setActionName:@"Add Column right"];
+    [self.undoManager setActionName:NSLocalizedString(NSLocalizedString(@"Add Column Right", nil), nil)];
 }
 
 -(IBAction)deleteColumn:(id)sender {
@@ -727,7 +727,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
     
     NSIndexSet *columnIndexes = [self.tableView selectedColumnIndexes];
     [self deleteColumnsAtIndexes:columnIndexes];
-    [self.undoManager setActionName:@"Delete Column(s)"];
+    [self.undoManager setActionName:NSLocalizedString(@"Delete Column(s)", nil)];
 }
 
 -(IBAction)deleteRow:(id)sender {
@@ -740,7 +740,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
     
     NSIndexSet *rowIndexes = [self.tableView selectedRowIndexes];
     [self deleteRowsAtIndexes:rowIndexes];
-    [self.undoManager setActionName:@"Delete Row(s)"];
+    [self.undoManager setActionName:NSLocalizedString(@"Delete Row(s)", nil)];
 }
 
 -(void)updateToolbarIcons {
@@ -1072,7 +1072,7 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
     NSIndexSet *toSelectRowIndexes = [[NSIndexSet alloc]initWithIndexesInRange:NSMakeRange(firstIndex, toInsertIndex-firstIndex)];
     [self.tableView selectRowIndexes:toSelectRowIndexes byExtendingSelection:NO];
     [[self.undoManager prepareWithInvocationTarget:self] deleteRowsAtIndexes:toSelectRowIndexes];
-    [self.undoManager setActionName:@"Paste Data"];
+    [self.undoManager setActionName:NSLocalizedString(@"Paste Data", nil)];
     [self dataGotEdited];
 }
 
@@ -1086,11 +1086,11 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
         }
         NSIndexSet *columnIndexes = [self.tableView selectedColumnIndexes];
         [self deleteColumnsAtIndexes:columnIndexes];
-        [self.undoManager setActionName:@"Delete Column(s)"];
+        [self.undoManager setActionName:NSLocalizedString(@"Delete Column(s)", nil)];
     }else{
         NSIndexSet *rowIndexes = [self.tableView selectedRowIndexes];
         [self deleteRowsAtIndexes:rowIndexes];
-        [self.undoManager setActionName:@"Delete Row(s)"];
+        [self.undoManager setActionName:NSLocalizedString(@"Delete Row(s)", nil)];
     }
     [self dataGotEdited];
 }
@@ -1150,6 +1150,6 @@ writeRowsWithIndexes:(NSIndexSet *)rowIndexes
 }
 
 -(IBAction)openReadme:(id)sender {
-    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://github.com/jakob/TableTool/blob/master/README.md"]];
+    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://github.com/Raymondhou0917/TableTool#readme"]];
 }
 @end

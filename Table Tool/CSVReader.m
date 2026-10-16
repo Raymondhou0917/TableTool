@@ -62,7 +62,7 @@
         
         if(!dataString) {
             if(outError != NULL) {
-                *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:1 userInfo: @{NSLocalizedDescriptionKey: @"Could not read data", NSLocalizedRecoverySuggestionErrorKey:@"Try specifying a different encoding."}];
+                *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:1 userInfo: @{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not read data", nil), NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Try specifying a different encoding.", nil)}];
             }
             return NO;
         }
@@ -215,7 +215,7 @@
         
         if(dataScanner.isAtEnd){
             if(outError != NULL) {
-                *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:2 userInfo:@{NSLocalizedDescriptionKey: @"Could not read data", NSLocalizedRecoverySuggestionErrorKey:@"Try specifying a different separator or quote."}];
+                *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:2 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not read data", nil), NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Try specifying a different separator or quote.", nil)}];
             }
             return NO;
         }
@@ -233,7 +233,7 @@
             dataScanner.scanLocation++;
             if(dataScanner.isAtEnd){
                 if(outError != NULL) {
-                    *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:2 userInfo:@{NSLocalizedDescriptionKey: @"Could not read data", NSLocalizedRecoverySuggestionErrorKey:@"Try specifying a different separator or quote."}];
+                    *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:2 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not read data", nil), NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Try specifying a different separator or quote.", nil)}];
                 }
                 return NO;
             }
@@ -250,14 +250,14 @@
                 return YES;
             }
             if(outError != NULL) {
-                *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:2 userInfo:@{NSLocalizedDescriptionKey: @"Could not read data", NSLocalizedRecoverySuggestionErrorKey:@"Try specifying a different separator or quote."}];
+                *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:2 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not read data", nil), NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Try specifying a different separator or quote.", nil)}];
             }
             return NO;
         }
         
     }
     if(outError != NULL) {
-        *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:2 userInfo:@{NSLocalizedDescriptionKey: @"Could not read data", NSLocalizedRecoverySuggestionErrorKey:@"Try specifying a different separator or quote."}];
+        *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:2 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not read data", nil), NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Try specifying a different separator or quote.", nil)}];
     }
     return NO;
 }
@@ -268,7 +268,7 @@
     while(!dataScanner.isAtEnd && ![quoteEndedCharacterSet characterIsMember:[dataString characterAtIndex:dataScanner.scanLocation]]){
         if([dataString characterAtIndex:dataScanner.scanLocation] == '\"' && !unquoted){
             if(outError != NULL) {
-                *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:3 userInfo:@{NSLocalizedDescriptionKey: @"Could not read data", NSLocalizedRecoverySuggestionErrorKey:@"Try specifying a different separator or quote."}];
+                *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:3 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not read data", nil), NSLocalizedRecoverySuggestionErrorKey:NSLocalizedString(@"Try specifying a different separator or quote.", nil)}];
             }
             return NO;
         }

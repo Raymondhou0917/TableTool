@@ -1,0 +1,36 @@
+
+/* Class = "NSTextFieldCell"; title = "Text Cell"; ObjectID = "7VV-C4-svb"; */
+"7VV-C4-svb.title" = "文字儲存格";
+
+/* Class = "NSToolbarItem"; label = "Add Column"; ObjectID = "L16-81-E18"; */
+"L16-81-E18.label" = "新增欄";
+
+/* Class = "NSToolbarItem"; paletteLabel = "Add Column"; ObjectID = "L16-81-E18"; */
+"L16-81-E18.paletteLabel" = "新增欄";
+
+/* Class = "NSToolbarItem"; label = "Delete Column"; ObjectID = "RIC-u2-0Xr"; */
+"RIC-u2-0Xr.label" = "刪除欄";
+
+/* Class = "NSToolbarItem"; paletteLabel = "Delete Column"; ObjectID = "RIC-u2-0Xr"; */
+"RIC-u2-0Xr.paletteLabel" = "刪除欄";
+
+/* Class = "NSToolbarItem"; label = "Convert…"; ObjectID = "cxB-ko-x5S"; */
+"cxB-ko-x5S.label" = "轉換格式⋯";
+
+/* Class = "NSToolbarItem"; paletteLabel = "Convert…"; ObjectID = "cxB-ko-x5S"; */
+"cxB-ko-x5S.paletteLabel" = "轉換格式⋯";
+
+/* Class = "NSToolbarItem"; label = "Add Row"; ObjectID = "uIc-SS-WZD"; */
+"uIc-SS-WZD.label" = "新增列";
+
+/* Class = "NSToolbarItem"; paletteLabel = "Add Row"; ObjectID = "uIc-SS-WZD"; */
+"uIc-SS-WZD.paletteLabel" = "新增列";
+
+/* Class = "NSWindow"; title = "Window"; ObjectID = "xOd-HO-29H"; */
+"xOd-HO-29H.title" = "視窗";
+
+/* Class = "NSToolbarItem"; label = "Delete Row"; ObjectID = "yQy-V2-Gkq"; */
+"yQy-V2-Gkq.label" = "刪除列";
+
+/* Class = "NSToolbarItem"; paletteLabel = "Delete Row"; ObjectID = "yQy-V2-Gkq"; */
+"yQy-V2-Gkq.paletteLabel" = "刪除列";

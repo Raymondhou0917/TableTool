@@ -20,7 +20,7 @@
         _dataArray = dataArray;
         _config = config.copy;
         _columnsOrder = columnsOrder;
-        errorCode4 = @"Try to specifiy another encoding to export data";
+        errorCode4 = NSLocalizedString(@"Try choosing a different encoding to export the data.", nil);
     }
     return self;
 }
@@ -79,7 +79,7 @@
     NSData *finalData = [dataString dataUsingEncoding:_config.encoding];
     if(finalData == nil){
         if(outError != NULL) {
-            *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:4 userInfo:@{NSLocalizedDescriptionKey: @"Could not write data", NSLocalizedRecoverySuggestionErrorKey:errorCode4}];
+            *outError = [NSError errorWithDomain:@"at.eggerapps.Table-Tool" code:4 userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString(@"Could not write data", nil), NSLocalizedRecoverySuggestionErrorKey:errorCode4}];
         }
         return nil;
     }

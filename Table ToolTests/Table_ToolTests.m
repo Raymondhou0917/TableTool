@@ -11,10 +11,99 @@
 #import "CSVReader.h"
 #import "CSVConfiguration.h"
 #import "CSVHeuristic.h"
+#import "CSVWriter.h"
+#import "Document.h"
 
 @interface Table_ToolTests : XCTestCase {
     int count;
     CSVConfiguration *config;
+}
+
+@end
+
+@interface NativeIntegrationTests : XCTestCase
+@end
+
+@implementation NativeIntegrationTests
+
+- (void)testBig5TraditionalChineseRoundTrip {
+    CSVConfiguration *configuration = [[CSVConfiguration alloc] init];
+    configuration.encoding = CFStringConvertEncodingToNSStringEncoding(kCFStringEncodingBig5);
+    NSArray *rows = @[[NSMutableArray arrayWithArray:@[@"姓名", @"備註"]],
+                      [NSMutableArray arrayWithArray:@[@"雷蒙", @"繁體中文，測試"]]];
+    CSVWriter *writer = [[CSVWriter alloc] initWithDataArray:rows columnsOrder:@[@0, @1] configuration:configuration];
+    NSError *error = nil;
+    NSData *encoded = [writer writeDataWithError:&error];
+    XCTAssertNotNil(encoded);
+    XCTAssertNil(error);
+    CSVReader *reader = [[CSVReader alloc] initWithData:encoded configuration:configuration];
+    XCTAssertEqualObjects([reader readLineWithError:&error], rows[0]);
+    XCTAssertEqualObjects([reader readLineWithError:&error], rows[1]);
+    XCTAssertNil(error);
+}
+
+- (void)testTranslatedNoQuoteControlUsesStableConfiguration {
+    for (NSString *nib in @[@"TTFormatViewController", @"TTFormatViewControllerAccessory"]) {
+        TTFormatViewController *controller = [[TTFormatViewController alloc] initWithNibName:nib bundle:nil];
+        XCTAssertNotNil(controller.view);
+        controller.escapeControl.selectedSegment = 2;
+        [controller updateConfiguration:nil];
+        XCTAssertEqualObjects(controller.config.quoteCharacter, @"");
+        XCTAssertEqualObjects(controller.config.escapeCharacter, @"");
+        controller.escapeControl.selectedSegment = 1;
+        [controller updateConfiguration:nil];
+        XCTAssertEqualObjects(controller.config.quoteCharacter, @"\"");
+        XCTAssertEqualObjects(controller.config.escapeCharacter, @"\\");
+    }
+}
+
+- (void)testLocalizedDocumentEditingAndSaveRoundTrip {
+    NSString *source = @"Name,Note,Count\nRaymond,\"繁體中文，English\",42\n柚子,\"line one\nline two\",7";
+    NSURL *directory = [NSURL fileURLWithPath:[NSTemporaryDirectory() stringByAppendingPathComponent:NSUUID.UUID.UUIDString]];
+    NSError *error = nil;
+    XCTAssertTrue([NSFileManager.defaultManager createDirectoryAtURL:directory withIntermediateDirectories:YES attributes:nil error:&error]);
+    NSURL *input = [directory URLByAppendingPathComponent:@"Sample.csv"];
+    XCTAssertTrue([source writeToURL:input atomically:YES encoding:NSUTF8StringEncoding error:&error]);
+    Document *document = [[Document alloc] init];
+    XCTAssertTrue([document readFromURL:input ofType:@"DocumentType" error:&error]);
+    [document makeWindowControllers];
+    NSWindow *window = document.windowControllers.firstObject.window;
+    XCTAssertNotNil(window); // NSWindowController loads the document nib lazily.
+    XCTAssertNotNil(document.tableView);
+    XCTAssertEqual(document.tableView.numberOfColumns, 3);
+    XCTAssertGreaterThanOrEqual(document.tableView.numberOfRows, 2);
+    BOOL chinese = [NSBundle.mainBundle.preferredLocalizations.firstObject hasPrefix:@"zh"];
+    XCTAssertEqualObjects(document.toolbarItemAddRow.label, chinese ? @"新增列" : @"Add Row");
+    XCTAssertEqualObjects(document.toolbarItemAddColumn.label, chinese ? @"新增欄" : @"Add Column");
+    TTFormatViewController *format = [document valueForKey:@"statusBarFormatViewController"];
+    XCTAssertEqualObjects(format.useFirstRowAsHeaderCheckbox.title, chinese ? @"首列為標題" : @"Header");
+    XCTAssertEqualObjects(NSLocalizedString(@"Could not read data", nil), chinese ? @"無法讀取資料" : @"Could not read data");
+    NSUInteger row = document.csvConfig.firstRowAsHeader ? 0 : 1;
+    [document tableView:document.tableView setObjectValue:@"測試完成，saved\nsecond line" forTableColumn:document.tableView.tableColumns[1] row:row];
+    NSURL *output = [directory URLByAppendingPathComponent:@"Saved.csv"];
+    XCTAssertTrue([document writeToURL:output ofType:@"DocumentType" error:&error]);
+    Document *reopened = [[Document alloc] init];
+    XCTAssertTrue([reopened readFromURL:output ofType:@"DocumentType" error:&error]);
+    [reopened makeWindowControllers];
+    XCTAssertNotNil(reopened.windowControllers.firstObject.window);
+    XCTAssertEqualObjects(reopened.data, document.data);
+    XCTAssertNil(error);
+
+    window.title = @"Table Tool Native — Sample.csv";
+    [window.contentView layoutSubtreeIfNeeded];
+    NSView *view = window.contentView.superview;
+    NSBitmapImageRep *bitmap = [view bitmapImageRepForCachingDisplayInRect:view.bounds];
+    [view cacheDisplayInRect:view.bounds toBitmapImageRep:bitmap];
+    NSData *png = [bitmap representationUsingType:NSBitmapImageFileTypePNG properties:@{}];
+    XCTAssertGreaterThan(png.length, 1000);
+    XCTAttachment *attachment = [XCTAttachment attachmentWithData:png uniformTypeIdentifier:@"public.png"];
+    attachment.name = chinese ? @"document-zh-Hant" : @"document-en";
+    attachment.lifetime = XCTAttachmentLifetimeKeepAlways;
+    [self addAttachment:attachment];
+    [document updateChangeCount:NSChangeCleared];
+    [reopened updateChangeCount:NSChangeCleared];
+    [document close];
+    [reopened close];
 }
 
 @end

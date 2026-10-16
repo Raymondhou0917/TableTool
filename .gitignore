@@ -1,3 +1,12 @@
-xcshareddata
 xcuserdata
 .DS_Store
+
+# Build products and local verification
+/build/
+/dist/
+/.local/
+*.xcresult
+.env
+.env.*
+*.pem
+*.p8
