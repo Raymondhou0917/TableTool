@@ -24,7 +24,7 @@ bash scripts/build.sh
 bash scripts/test.sh
 ```
 
-App 位於 `build/Release-arm64/Build/Products/Release/`，ZIP 位於 `dist/`。測試會執行英文與繁體中文兩組，結果包包含真正 AppKit 介面的截圖附件。
+App 位於 `build/Distribution-arm64/Build/Products/Release/`，ZIP 位於 `dist/`。測試會執行英文與繁體中文兩組，結果包包含真正 AppKit 介面的截圖附件。
 
 ## 資料與限制
 

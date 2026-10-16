@@ -5,13 +5,13 @@ cd "$(dirname "$0")/.."
 # No third-party dependencies, credentials, or paid API calls are required.
 architecture="${ARCHITECTURE:-arm64}"
 case "$architecture" in arm64|x86_64) ;; *) echo 'ARCHITECTURE must be arm64 or x86_64' >&2; exit 2;; esac
-derived="build/Release-$architecture"
+derived="build/Distribution-$architecture"
 xcodebuild -project 'Table Tool.xcodeproj' -scheme 'Table Tool' \
   -configuration Release -destination 'generic/platform=macOS' \
   -derivedDataPath "$derived" ARCHS="$architecture" ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="${SIGN_IDENTITY:--}" build
 app="$derived/Build/Products/Release/Table Tool Native.app"
-/usr/bin/lipo -verify_arch "$architecture" "$app/Contents/MacOS/Table Tool Native"
+/usr/bin/lipo "$app/Contents/MacOS/Table Tool Native" -verify_arch "$architecture"
 /usr/bin/codesign --verify --deep --strict "$app"
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$app/Contents/Info.plist")
 mkdir -p dist

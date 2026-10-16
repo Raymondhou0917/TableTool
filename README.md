@@ -34,7 +34,7 @@ bash scripts/build.sh
 bash scripts/test.sh
 ```
 
-The app is written to `build/Release-arm64/Build/Products/Release/Table Tool Native.app`, and the ZIP to `dist/`. Tests run in both interface languages on the host architecture and attach native AppKit window snapshots to the result bundles.
+The app is written to `build/Distribution-arm64/Build/Products/Release/Table Tool Native.app`, and the ZIP to `dist/`. Tests run in both interface languages on the host architecture and attach native AppKit window snapshots to the result bundles.
 
 ## CSV behavior
 
